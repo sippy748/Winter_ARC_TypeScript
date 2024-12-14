@@ -281,6 +281,224 @@ console.log(typeof "Hello");             // "string"
 5. Always use primitive types (string, number, boolean) instead of their object wrapper versions
 
 
+### Union Types in TypeScript
+Union types allow a variable to hold values of multiple types. They are created using the pipe character (`|`) to combine two or more types into a single type.
+
+#### Basic Union Types
+```typescript
+// Simple union type
+let id: string | number;
+id = "abc123";  // Valid
+id = 123;       // Valid
+id = true;      // Error: Type 'boolean' is not assignable
+
+// Union with multiple types
+let status: string | number | boolean = "active";
+status = 1;      // Valid
+status = false;  // Valid
+```
+
+#### Union Types in Functions
+```typescript
+// Function parameter with union type
+function orderSummary(customerName: string, count: number | string) {
+    return `${customerName} ordered ${count} item(s)`;
+}
+
+// Valid function calls
+orderSummary("Sam", 5);         // "Sam ordered 5 item(s)"
+orderSummary("Sam", "five");    // "Sam ordered five item(s)"
+orderSummary("Charlie", "12");  // "Charlie ordered 12 item(s)"
+```
+
+#### Type Narrowing
+Type narrowing is the process of refining union types to more specific types within conditional blocks.
+
+1. **Using typeof for Type Narrowing**
+```typescript
+function processValue(value: string | number) {
+    // Type narrowing using typeof
+    if (typeof value === "string") {
+        // TypeScript knows value is a string here
+        return value.toLowerCase();
+    } else {
+        // TypeScript knows value is a number here
+        return value.toFixed(2);
+    }
+}
+```
+
+2. **Type Narrowing with Multiple Types**
+```typescript
+function displayData(data: string | number | boolean) {
+    if (typeof data === "string") {
+        console.log("String:", data.toUpperCase());
+    } else if (typeof data === "number") {
+        console.log("Number:", data.toFixed(2));
+    } else {
+        console.log("Boolean:", data ? "Yes" : "No");
+    }
+}
+```
+
+#### Deep Dive: Understanding Type Narrowing with Intermediate Variables
+Let's break down this pattern:
+
+```typescript
+function orderSummary(customerName: string, count: number | string) {
+    // 1. Create an intermediate variable
+    let countOutput = count;
+
+    // 2. Perform type narrowing and transformation
+    if (typeof count === "string") {
+        countOutput = count.toLowerCase();
+    }
+
+    // 3. Use the processed value
+    return `${customerName} ordered ${countOutput} item(s)`;
+}
+```
+
+**Why use `countOutput` instead of modifying `count` directly?**
+
+1. **Parameter Immutability**:
+```typescript
+// ❌ This wouldn't work
+function orderSummary(customerName: string, count: number | string) {
+    if (typeof count === "string") {
+        count = count.toLowerCase(); // Error: Parameters are readonly
+    }
+    return `${customerName} ordered ${count} item(s)`;
+}
+```
+
+2. **Separation of Original and Processed Values**:
+```typescript
+// ✅ Clear separation of original and processed data
+function orderSummary(customerName: string, count: number | string) {
+    const processedCount = typeof count === "string" 
+        ? count.toLowerCase()  // Transform strings
+        : count;              // Keep numbers as is
+    return `${customerName} ordered ${processedCount} item(s)`;
+}
+```
+
+3. **Type Safety in Action**:
+```typescript
+function orderSummary(customerName: string, count: number | string) {
+    // countOutput starts with the same union type as count
+    let countOutput: number | string = count;
+
+    if (typeof count === "string") {
+        // Inside this block, TypeScript knows count is a string
+        // So we can safely call string methods
+        countOutput = count.toLowerCase();
+    }
+    // Outside the block, countOutput maintains the union type
+    // but might have transformed string values
+    return `${customerName} ordered ${countOutput} item(s)`;
+}
+
+// Examples:
+orderSummary("John", "FIVE");  // "John ordered five item(s)"
+orderSummary("Jane", 5);       // "Jane ordered 5 item(s)"
+```
+
+**Key Points:**
+1. Parameters in TypeScript/JavaScript are effectively readonly
+2. The intermediate variable (`countOutput`) allows us to modify the value while preserving the original
+3. Type narrowing works on the original variable (`count`), ensuring type-safe operations
+4. The processed value is stored in the intermediate variable for final use
+5. We check the type of count because it's the original value
+TypeScript can track the type of the original parameter better than a derived variable
+6.countOutput serves as a working variable where we can store the processed value
+
+This pattern is common when you need to:
+- Transform values based on their type
+- Preserve the original parameter values
+- Maintain type safety throughout the function
+
+#### Common Use Cases
+
+1. **Optional Parameters**
+```typescript
+// Parameter that could be undefined
+function greet(name: string | undefined) {
+    if (name === undefined) {
+        return "Hello, guest!";
+    }
+    return `Hello, ${name}!`;
+}
+```
+
+2. **API Responses**
+```typescript
+// API response that could be data or error
+type ApiResponse = {
+    data: string | null;
+    error: Error | null;
+}
+
+function handleResponse(response: ApiResponse) {
+    if (response.error) {
+        console.error("Error:", response.error.message);
+    } else if (response.data) {
+        console.log("Data:", response.data);
+    }
+}
+```
+
+3. **Form Values**
+```typescript
+// Form field that accepts multiple types
+type FormField = {
+    value: string | number | boolean;
+    label: string;
+}
+
+const fields: FormField[] = [
+    { value: "John", label: "Name" },
+    { value: 25, label: "Age" },
+    { value: true, label: "Subscribe" }
+];
+```
+
+#### Best Practices:
+1. **Keep Unions Simple**
+```typescript
+// Good: Simple, clear union
+type Status = "pending" | "success" | "error";
+
+// Bad: Overly complex union
+type ComplexType = string | number | boolean | undefined | null | Symbol;
+```
+
+2. **Use Type Aliases for Reusable Unions**
+```typescript
+// Define reusable union type
+type StringOrNumber = string | number;
+
+function process(value: StringOrNumber) {
+    // Use the type alias
+}
+```
+
+3. **Proper Type Narrowing**
+```typescript
+function processValue(value: string | number) {
+    // Good: Proper type narrowing
+    if (typeof value === "string") {
+        return value.toLowerCase();
+    }
+    return value.toFixed(2);
+
+    // Bad: Type assertion without checking
+    return (value as string).toLowerCase();
+}
+```
+
+Remember: Union types are erased at runtime, but type narrowing using `typeof` and other JavaScript operators remains functional as it uses JavaScript's runtime type checking.
+
 ### Primitive Types in TypeScript
 TypeScript supports all seven JavaScript primitive types, providing type-safety and better tooling support for each one.
 
